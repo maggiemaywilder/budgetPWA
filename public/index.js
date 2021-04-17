@@ -142,7 +142,72 @@ function sendTransaction(isAdding) {
     nameEl.value = "";
     amountEl.value = "";
   });
+};
+
+function saveRecord(transaction) {
+  // can I create an offline balance estimate table in leiu of the populates
+  let db = null; //do I want this called out or just declared?
+  let DBOpenReq = indexedDB.open('budgetDB', 1); //do I want a variable to define and increment version?
+
+  const entry = {
+    id: Date.now(), // can I autoIncrement? do I need this if keypath is the timestamp and date is part? I don't think so but I won't remove until verified.
+    name: 'input',
+    value: 'input',
+    date: 'input', // passed into saveRecord as transaction
+  };
+
+  DBOpenReq.addEventListener('error', (err) => {
+    console.warn(err);
+  }); 
+
+  DBOpenReq.addEventListener('success', (err) => {
+    db = ev.target.result;
+    console.log('success', db);
+  }); 
+
+  DBOpenReq.addEventListener('upgradeneeded', (err) => {
+    db = ev.target.result;
+    let oldVersion = ev.oldVersion;
+    let newVersion = ev.newVersion || db.version;
+    console.log('DB updated from version', oldVersion, ' to ', newVersion);
+    if (!objectStoreNames.contains('budgetStore')) {
+      objectStore = db.createObjectStore('budgetStore', {
+        keyPath: Date.now(), // as this will only be manually entered transactions, milliseconds should be sufficiently unique I think (hope?)
+      });
+    }
+
+    function makeTX(storeName, mode) {
+      let tx = db.transaction(storeName, mode);
+      txonerror = (err) =>{
+        console.warn(err);
+      };
+      return tx;
+    }
+
+    tx.oncomplete = (ev) => {
+      console.log(ev, 'complete');
+      // display table with last known balance and table of transactions awaiting upload: local storage for last known balance, display that "you are offline and last know balance may not be accurate if transactions have been posted from another location"?
+      // look at line 95 in testing.js
+      // clear form
+
+    };
+
+    let store = tx.objectStore('budgetStore');
+    let request = store.add(entry);
+
+    request.onsuccess = (ev) => {
+        console.log('did it');
+        // this means this one was a success
+        // move on to the next request or commit the transaction
+    }
+    request.onerror = (err) => {
+        console.log('oops')
+    };
+}) 
+
 }
+
+
 
 document.querySelector("#add-btn").onclick = function() {
   sendTransaction(true);
