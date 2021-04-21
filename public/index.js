@@ -1,3 +1,5 @@
+const save
+
 let transactions = [];
 let myChart;
 
@@ -94,8 +96,8 @@ function sendTransaction(isAdding) {
 
   // create record
   let transaction = {
-    name: nameEl.value,
-    value: amountEl.value,
+    name: nameEl.value.trim(),
+    value: amountEl.value.trim(),
     date: new Date().toISOString()
   };
 
@@ -135,6 +137,7 @@ function sendTransaction(isAdding) {
     }
   })
   .catch(err => {
+    console.log(err, 'line 138')
     // fetch failed, so save in indexed db
     saveRecord(transaction);
 
@@ -142,77 +145,60 @@ function sendTransaction(isAdding) {
     nameEl.value = "";
     amountEl.value = "";
   });
-};
-
-function saveRecord(transaction) {
-  // can I create an offline balance estimate table in leiu of the populates
-  let db = null; //do I want this called out or just declared?
-  let DBOpenReq = indexedDB.open('budgetDB', 1); //do I want a variable to define and increment version?
-
-  const entry = {
-    id: Date.now(), // can I autoIncrement? do I need this if keypath is the timestamp and date is part? I don't think so but I won't remove until verified.
-    name: 'input',
-    value: 'input',
-    date: 'input', // passed into saveRecord as transaction
-  };
-
-  DBOpenReq.addEventListener('error', (err) => {
-    console.warn(err);
-  }); 
-
-  DBOpenReq.addEventListener('success', (err) => {
-    db = ev.target.result;
-    console.log('success', db);
-  }); 
-
-  DBOpenReq.addEventListener('upgradeneeded', (err) => {
-    db = ev.target.result;
-    let oldVersion = ev.oldVersion;
-    let newVersion = ev.newVersion || db.version;
-    console.log('DB updated from version', oldVersion, ' to ', newVersion);
-    if (!objectStoreNames.contains('budgetStore')) {
-      objectStore = db.createObjectStore('budgetStore', {
-        keyPath: Date.now(), // as this will only be manually entered transactions, milliseconds should be sufficiently unique I think (hope?)
-      });
-    }
-
-    function makeTX(storeName, mode) {
-      let tx = db.transaction(storeName, mode);
-      txonerror = (err) =>{
-        console.warn(err);
-      };
-      return tx;
-    }
-
-    tx.oncomplete = (ev) => {
-      console.log(ev, 'complete');
-      // display table with last known balance and table of transactions awaiting upload: local storage for last known balance, display that "you are offline and last know balance may not be accurate if transactions have been posted from another location"?
-      // look at line 95 in testing.js
-      // clear form
-
-    };
-
-    let store = tx.objectStore('budgetStore');
-    let request = store.add(entry);
-
-    request.onsuccess = (ev) => {
-        console.log('did it');
-        // this means this one was a success
-        // move on to the next request or commit the transaction
-    }
-    request.onerror = (err) => {
-        console.log('oops')
-    };
-}) 
-
 }
 
+function saveRecord(transaction) {
+  let db;
+  let budgetVersion;
+
+  // open database
+  const DBOpenReq = indexedDB.open('budgetDB', budgetVersion || 15);
+
+  DBOpenReq.onupgradeneeded = function (e) {
+    const { oldVersion } = e;
+    const newness = e.newVersion || db.version;
+    console.log(`Version updated from ${oldVersion} to ${newness}`);
+
+    db.e.target.result;
+
+    if (db.objectStoreNames.length === 0) {
+      db.createObjectStore('budgetStore', { autoIncrement: true });
+    }
+  };
+
+  DBOpenReq.onerror = function (e) {
+    console.log(`Woops! ${e.target.errorCode}`);
+  };
+
+  // create object
+  let entry = {
+    id: Date.now().toString(36).toLowerCase(),
+    // should be unique enough for manually entered transactions in this instance, 
+    // ***** switch to uuid or something in future production *****
+    name: transaction.name,
+    value: transaction.value,
+    date: transaction.date
+  };
 
 
-document.querySelector("#add-btn").onclick = function() {
+  // start transaction & make request
+
+  // wait for completion
+
+  // do something with request
+
+};
+
+
+
+
+
+document.querySelector("#add-btn").onclick = function(e) {
+  e.preventDefault();
   sendTransaction(true);
 };
 
-document.querySelector("#sub-btn").onclick = function() {
+document.querySelector("#sub-btn").onclick = function(e) {
+  e.preventDefault();
   sendTransaction(false);
 };
